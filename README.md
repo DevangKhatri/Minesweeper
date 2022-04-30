@@ -1,0 +1,1 @@
+This is a minesweeper game project made solely python. Modules used are Pygame and random , which are the essence of python game design basics .
