@@ -5,7 +5,7 @@ pygame.init()
 
 printer = PrettyPrinter()
 
-WIDTH , HEIGHT = 500 , 600
+WIDTH , HEIGHT = 450 , 540
 
 
 win = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -15,9 +15,10 @@ BG_COLOR = "white"
 ROWS , COLS = 15 , 15
 MINES = 15
 
+
 NUM_FONT = pygame.font.SysFont('comicsans' , 20)
 NUM_COLORS = {1: "black" , 2 : "green" , 3 : "red" , 4 : "orange " , 5 : "yellow" , 6 : "purple" , 7: "blue" , 8 : "pink"}
-
+RECT_COLOR = (128 , 128 , 128)
 def get_neighbors(row , col , rows , cols ):
     neighbors = []
 
@@ -68,19 +69,26 @@ def create_minefield(rows , cols , mines):
 def draw(win , field , cover_field):
     win.fill(BG_COLOR)
 
-    size = WIDTH//ROWS
+    size = WIDTH/ROWS
     for i , row in enumerate(field):
-        
+        y = size * i 
         for j , value in enumerate(row):
-            text = NUM_FONT.render(str(value) , 1 , NUM_COLORS[value])
-            win.blit(text , (i , j))
+            x = size * j
+            pygame.draw.rect(win ,RECT_COLOR , (x , y , size, size))
+            pygame.draw.rect(win ,"black" , (x , y , size, size) , 2)
+            
+            if value > 0:
+                text = NUM_FONT.render(str(value) , 1 , NUM_COLORS[value])
+                win.blit(text , (x +(size/2 - text.get_width()/2) , y +(size/2 - text.get_height()/2)))
+
+           
 
     pygame.display.update()
 
 def main():
     run = True 
     field = create_minefield(ROWS , COLS , MINES)
-    cover_field = [[0 for _ in range(cols)] for _ in range(rows)]
+    cover_field = [[0 for _ in range(COLS)] for _ in range(ROWS)]
     printer.pprint(field)
 
     while run:
@@ -88,7 +96,7 @@ def main():
             if event.type == pygame.QUIT:
                 run = False 
                 break
-        draw(win)
+        draw(win , field , cover_field)
 
     pygame.quit()
 
