@@ -1,3 +1,4 @@
+from ctypes.wintypes import SIZE
 import pygame 
 import random
 from pprint import PrettyPrinter
@@ -15,10 +16,13 @@ BG_COLOR = "white"
 ROWS , COLS = 15 , 15
 MINES = 15
 
+SIZE = WIDTH/ROWS
 
 NUM_FONT = pygame.font.SysFont('comicsans' , 20)
 NUM_COLORS = {1: "black" , 2 : "green" , 3 : "red" , 4 : "orange " , 5 : "yellow" , 6 : "purple" , 7: "blue" , 8 : "pink"}
-RECT_COLOR = (128 , 128 , 128)
+RECT_COLOR = (200 , 200 , 200)
+CLICKED_RECT_COLOR = (140 , 140 , 140)
+
 def get_neighbors(row , col , rows , cols ):
     neighbors = []
 
@@ -69,21 +73,37 @@ def create_minefield(rows , cols , mines):
 def draw(win , field , cover_field):
     win.fill(BG_COLOR)
 
-    size = WIDTH/ROWS
+
     for i , row in enumerate(field):
-        y = size * i 
+        y = SIZE * i 
         for j , value in enumerate(row):
-            x = size * j
-            pygame.draw.rect(win ,RECT_COLOR , (x , y , size, size))
-            pygame.draw.rect(win ,"black" , (x , y , size, size) , 2)
+            x = SIZE * j
+
+            is_covered = cover_field[i][j] == 0
+
+            if is_covered:
+                pygame.draw.rect(win ,RECT_COLOR , (x , y , SIZE, SIZE))
+                pygame.draw.rect(win ,"black" , (x , y , SIZE, SIZE) , 2)
+                continue
+            else:
+                pygame.draw.rect(win ,CLICKED_RECT_COLOR , (x , y , SIZE, SIZE))
+                pygame.draw.rect(win ,"black" , (x , y , SIZE, SIZE) , 2)
             
             if value > 0:
                 text = NUM_FONT.render(str(value) , 1 , NUM_COLORS[value])
-                win.blit(text , (x +(size/2 - text.get_width()/2) , y +(size/2 - text.get_height()/2)))
+                win.blit(text , (x +(SIZE/2 - text.get_width()/2) , y +(SIZE/2 - text.get_height()/2)))
 
            
 
     pygame.display.update()
+
+def get_grid_pos(mouse_pos):
+    mx , my = mouse_pos
+    row = int(my // SIZE)
+    col = int(mx // SIZE)
+
+    return row , col 
+
 
 def main():
     run = True 
@@ -96,6 +116,15 @@ def main():
             if event.type == pygame.QUIT:
                 run = False 
                 break
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                row , col = get_grid_pos(pygame.mouse.get_pos())
+                if row >= ROWS or col >= COLS:
+                    continue
+                cover_field[row][col] = 1
+                #uncover_from_pos(row , col )
+
+
+
         draw(win , field , cover_field)
 
     pygame.quit()
