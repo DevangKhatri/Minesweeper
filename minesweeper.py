@@ -23,6 +23,7 @@ NUM_FONT = pygame.font.SysFont('comicsans' , 20)
 NUM_COLORS = {1: "black" , 2 : "green" , 3 : "red" , 4 : "orange " , 5 : "yellow" , 6 : "purple" , 7: "blue" , 8 : "pink"}
 RECT_COLOR = (200 , 200 , 200)
 CLICKED_RECT_COLOR = (140 , 140 , 140)
+FLAG_COLOR = "red"
 
 def get_neighbors(row , col , rows , cols ):
     neighbors = []
@@ -74,13 +75,18 @@ def create_minefield(rows , cols , BOMBS):
 def draw(win , field , cover_field):
     win.fill(BG_COLOR)
 
-
     for i , row in enumerate(field):
         y = SIZE * i 
         for j , value in enumerate(row):
             x = SIZE * j
 
             is_covered = cover_field[i][j] == 0
+            is_flag = cover_field[i][j] == -2
+
+            if is_flag:
+                pygame.draw.rect(win , FLAG_COLOR , (x , y , SIZE, SIZE))
+                pygame.draw.rect(win ,"black" , (x , y , SIZE, SIZE) , 2)
+                continue
 
             if is_covered:
                 pygame.draw.rect(win ,RECT_COLOR , (x , y , SIZE, SIZE))
@@ -129,8 +135,8 @@ def main():
     run = True 
     field = create_minefield(ROWS , COLS , BOMBS)
     cover_field = [[0 for _ in range(COLS)] for _ in range(ROWS)]
+    flags = BOMBS
     
-
     while run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -140,9 +146,21 @@ def main():
                 row , col = get_grid_pos(pygame.mouse.get_pos())
                 if row >= ROWS or col >= COLS:
                     continue
-                cover_field[row][col] = 1
-                uncover_from_pos(row , col  , cover_field , field)
-
+                mouse_pressed = pygame.mouse.get_pressed()
+                if mouse_pressed[0]:
+                    row , col = get_grid_pos(pygame.mouse.get_pos())
+                    if row >= ROWS or col >= COLS:
+                        continue
+                    cover_field[row][col] = 1
+                    uncover_from_pos(row , col  , cover_field , field)
+                elif mouse_pressed[2]:
+                    if cover_field[row][col] == -2:
+                       cover_field[row][col] = 0
+                       flags += 1
+                    else:
+                       flags -= 1
+                       cover_field[row][col] = -2
+                    
 
 
         draw(win , field , cover_field)
