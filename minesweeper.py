@@ -1,10 +1,11 @@
 from ctypes.wintypes import SIZE
+import queue
 import pygame 
 import random
-from pprint import PrettyPrinter
+from queue import Queue
 pygame.init()
 
-printer = PrettyPrinter()
+
 
 WIDTH , HEIGHT = 450 , 540
 
@@ -14,7 +15,7 @@ pygame.display.set_caption("Minesweeper")
 
 BG_COLOR = "white"
 ROWS , COLS = 15 , 15
-MINES = 15
+BOMBS = 30
 
 SIZE = WIDTH/ROWS
 
@@ -48,11 +49,11 @@ def get_neighbors(row , col , rows , cols ):
 
 
 
-def create_minefield(rows , cols , mines):
+def create_minefield(rows , cols , BOMBS):
     field = [[0 for _ in range(cols)] for _ in range(rows)]
     mine_positions = set()
 
-    while len(mine_positions) < mines :
+    while len(mine_positions) < BOMBS :
         row = random.randrange(0 , rows)
         col = random.randrange(0 , cols)
         pos = row , col 
@@ -104,12 +105,31 @@ def get_grid_pos(mouse_pos):
 
     return row , col 
 
+def uncover_from_pos(row , col  , cover_field , field):
+    q = Queue()
+    q.put((row , col))
+    visited = set()
+    
+    while not q.empty():
+        current = q.get()
+
+        neighbors = get_neighbors(*current , ROWS , COLS)
+        for r , c in neighbors :
+            if (r , c ) in visited:
+                continue
+            value = field[r][c]
+            cover_field[r][c] = 1
+            if value == 0:
+                q.put((r , c ))
+            
+            visited.add((r , c))
+
 
 def main():
     run = True 
-    field = create_minefield(ROWS , COLS , MINES)
+    field = create_minefield(ROWS , COLS , BOMBS)
     cover_field = [[0 for _ in range(COLS)] for _ in range(ROWS)]
-    printer.pprint(field)
+    
 
     while run:
         for event in pygame.event.get():
@@ -121,7 +141,7 @@ def main():
                 if row >= ROWS or col >= COLS:
                     continue
                 cover_field[row][col] = 1
-                #uncover_from_pos(row , col )
+                uncover_from_pos(row , col  , cover_field , field)
 
 
 
