@@ -2,6 +2,7 @@ from ctypes.wintypes import SIZE
 import queue
 import pygame 
 import random
+import time
 from queue import Queue
 pygame.init()
 
@@ -14,16 +15,22 @@ win = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Minesweeper")
 
 BG_COLOR = "white"
-ROWS , COLS = 15 , 15
-BOMBS = 30
+ROWS , COLS = 10 , 10
+BOMBS = 15
 
 SIZE = WIDTH/ROWS
 
 NUM_FONT = pygame.font.SysFont('comicsans' , 20)
+LOST_FONT = pygame.font.SysFont("comicsans" , 100)
+TIME_FONT = pygame.font.SysFont("comicsans" , 50)
+
 NUM_COLORS = {1: "black" , 2 : "green" , 3 : "red" , 4 : "orange " , 5 : "yellow" , 6 : "purple" , 7: "blue" , 8 : "pink"}
+
 RECT_COLOR = (200 , 200 , 200)
 CLICKED_RECT_COLOR = (140 , 140 , 140)
-FLAG_COLOR = "red"
+FLAG_COLOR = "green"
+BOMB_COLOR = "red"
+
 
 def get_neighbors(row , col , rows , cols ):
     neighbors = []
@@ -68,12 +75,16 @@ def create_minefield(rows , cols , BOMBS):
     for mine in mine_positions:
         neighbors = get_neighbors(*mine , rows , cols)
         for r , c in neighbors:
-            field[r][c] += 1 
+            if field[r][c] != -1 :
+               field[r][c] += 1 
     
     return field
 
-def draw(win , field , cover_field):
+def draw(win , field , cover_field , current_time):
     win.fill(BG_COLOR)
+
+    time_text = TIME_FONT.render(f"Time Elapsed: {round(current_time)}" , 1 , "black")
+    win.blit(time_text ,( 10 , HEIGHT - time_text.get_height()))
 
     for i , row in enumerate(field):
         y = SIZE * i 
@@ -82,6 +93,7 @@ def draw(win , field , cover_field):
 
             is_covered = cover_field[i][j] == 0
             is_flag = cover_field[i][j] == -2
+            is_bomb = value == -1
 
             if is_flag:
                 pygame.draw.rect(win , FLAG_COLOR , (x , y , SIZE, SIZE))
@@ -95,6 +107,8 @@ def draw(win , field , cover_field):
             else:
                 pygame.draw.rect(win ,CLICKED_RECT_COLOR , (x , y , SIZE, SIZE))
                 pygame.draw.rect(win ,"black" , (x , y , SIZE, SIZE) , 2)
+                if is_bomb:
+                    pygame.draw.circle(win , BOMB_COLOR , (x + SIZE/2 , y + SIZE/2 ) , SIZE/2 - 4 )
             
             if value > 0:
                 text = NUM_FONT.render(str(value) , 1 , NUM_COLORS[value])
@@ -124,11 +138,18 @@ def uncover_from_pos(row , col  , cover_field , field):
             if (r , c ) in visited:
                 continue
             value = field[r][c]
-            cover_field[r][c] = 1
-            if value == 0:
+          
+            if value == 0 and cover_field[r][c] != -2:
                 q.put((r , c ))
-            
+
+            if cover_field[r][c] != -2:
+                cover_field[r][c] = 1
             visited.add((r , c))
+
+def draw_lost(win , text):
+    text = LOST_FONT.render(text , 1 , "black")
+    win.blit(text , (WIDTH/2 - text.get_width()/2 , HEIGHT/2 - text.get_width()/2))
+    pygame.display.update()
 
 
 def main():
@@ -136,23 +157,40 @@ def main():
     field = create_minefield(ROWS , COLS , BOMBS)
     cover_field = [[0 for _ in range(COLS)] for _ in range(ROWS)]
     flags = BOMBS
+    clicks = 0
+    lost = False
+
+    start_time = 0 
     
     while run:
+        if start_time >0:
+            current_time = time.time() - start_time
+        else:
+            current_time = 0
+            
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False 
                 break
+
             if event.type == pygame.MOUSEBUTTONDOWN:
                 row , col = get_grid_pos(pygame.mouse.get_pos())
                 if row >= ROWS or col >= COLS:
                     continue
+
                 mouse_pressed = pygame.mouse.get_pressed()
-                if mouse_pressed[0]:
-                    row , col = get_grid_pos(pygame.mouse.get_pos())
-                    if row >= ROWS or col >= COLS:
-                        continue
+                if mouse_pressed[0] and cover_field[row][col] != -2:
                     cover_field[row][col] = 1
-                    uncover_from_pos(row , col  , cover_field , field)
+
+                    if field[row][col] == -1: #BOMB clicked
+                       lost = True
+
+                    if clicks == 0 or field[row][col] == 0:
+                       uncover_from_pos(row , col  , cover_field , field)
+                    if clicks == 0 :
+                        start_time = time.time()
+                    clicks += 1
+
                 elif mouse_pressed[2]:
                     if cover_field[row][col] == -2:
                        cover_field[row][col] = 0
@@ -161,9 +199,19 @@ def main():
                        flags -= 1
                        cover_field[row][col] = -2
                     
+        if lost:
+            draw(win , field , cover_field)
+            draw_lost(win , "You lost! Try Again!")
+            pygame.time.delay(5000)
 
+            field = create_minefield(ROWS , COLS , BOMBS)
+            cover_field = [[0 for _ in range(COLS)] for _ in range(ROWS)]
+            flags = BOMBS
+            clicks = 0
+            lost = False
+                    
 
-        draw(win , field , cover_field)
+        draw(win , field , cover_field , current_time)
 
     pygame.quit()
 
